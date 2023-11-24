@@ -37,6 +37,7 @@ func DefaultContextWithKeys(
 	keys map[string]*storetypes.KVStoreKey,
 	transKeys map[string]*storetypes.TransientStoreKey,
 	memKeys map[string]*storetypes.MemoryStoreKey,
+	clessKeys map[string]*storetypes.ConsensuslessStoreKey,
 ) sdk.Context {
 	db := dbm.NewMemDB()
 	cms := store.NewCommitMultiStore(db, log.NewNopLogger(), metrics.NewNoOpMetrics())
@@ -51,6 +52,10 @@ func DefaultContextWithKeys(
 
 	for _, memkey := range memKeys {
 		cms.MountStoreWithDB(memkey, storetypes.StoreTypeMemory, db)
+	}
+
+	for _, clessKey := range clessKeys {
+		cms.MountStoreWithDB(clessKey, storetypes.StoreTypeConsensusless, db)
 	}
 
 	err := cms.LoadLatestVersion()

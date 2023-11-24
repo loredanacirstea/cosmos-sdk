@@ -332,6 +332,7 @@ const (
 	StoreTypeMemory
 	StoreTypeSMT
 	StoreTypePersistent
+	StoreTypeConsensusless
 )
 
 func (st StoreType) String() string {
@@ -356,6 +357,9 @@ func (st StoreType) String() string {
 
 	case StoreTypePersistent:
 		return "StoreTypePersistent"
+
+	case StoreTypeConsensusless:
+		return "StoreTypeConsensusless"
 	}
 
 	return "unknown store type"
@@ -454,6 +458,25 @@ func (key *MemoryStoreKey) String() string {
 	return fmt.Sprintf("MemoryStoreKey{%p, %s}", key, key.name)
 }
 
+// ConsensuslessStoreKey defines a typed key to be used with an in-memory KVStore.
+type ConsensuslessStoreKey struct {
+	name string
+}
+
+func NewConsensuslessStoreKey(name string) *ConsensuslessStoreKey {
+	return &ConsensuslessStoreKey{name: name}
+}
+
+// Name returns the name of the ConsensuslessStoreKey.
+func (key *ConsensuslessStoreKey) Name() string {
+	return key.name
+}
+
+// String returns a stringified representation of the ConsensuslessStoreKey.
+func (key *ConsensuslessStoreKey) String() string {
+	return fmt.Sprintf("ConsensuslessStoreKey{%p, %s}", key, key.name)
+}
+
 //----------------------------------------
 
 // TraceContext contains TraceKVStore context data. It will be written with
@@ -528,6 +551,20 @@ func NewMemoryStoreKeys(names ...string) map[string]*MemoryStoreKey {
 	keys := make(map[string]*MemoryStoreKey)
 	for _, n := range names {
 		keys[n] = NewMemoryStoreKey(n)
+	}
+
+	return keys
+}
+
+// NewConsensuslessStoreKeys constructs a new map matching store key names to their
+// respective ConsensuslessStoreKey references.
+// The function will panic if there is a potential conflict in names (see `assertNoPrefix`
+// function for more details).
+func NewConsensuslessStoreKeys(names ...string) map[string]*ConsensuslessStoreKey {
+	assertNoCommonPrefix(names)
+	keys := make(map[string]*ConsensuslessStoreKey)
+	for _, n := range names {
+		keys[n] = NewConsensuslessStoreKey(n)
 	}
 
 	return keys

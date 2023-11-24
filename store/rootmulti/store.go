@@ -1033,6 +1033,32 @@ func (rs *Store) loadCommitStoreFromParams(key types.StoreKey, id types.CommitID
 
 		return mem.NewStore(), nil
 
+	case types.StoreTypeConsensusless:
+		if _, ok := key.(*types.ConsensuslessStoreKey); !ok {
+			return nil, fmt.Errorf("unexpected key type for a ConsensuslessStoreKey; got: %s", key.String())
+		}
+		var store types.CommitKVStore
+		var err error
+
+		if params.initialVersion == 0 {
+			store, err = iavl.LoadStore(db, rs.logger, key, id, rs.iavlCacheSize, rs.iavlDisableFastNode, rs.metrics)
+		} else {
+			store, err = iavl.LoadStoreWithInitialVersion(db, rs.logger, key, id, params.initialVersion, rs.iavlCacheSize, rs.iavlDisableFastNode, rs.metrics)
+		}
+
+		if err != nil {
+			return nil, err
+		}
+
+		if rs.interBlockCache != nil {
+			// Wrap and get a CommitKVStore with inter-block caching. Note, this should
+			// only wrap the primary CommitKVStore, not any store that is already
+			// branched as that will create unexpected behavior.
+			store = rs.interBlockCache.GetStoreCache(key, store)
+		}
+
+		return store, err
+
 	default:
 		panic(fmt.Sprintf("unrecognized store type %v", params.typ))
 	}
@@ -1044,7 +1070,7 @@ func (rs *Store) buildCommitInfo(version int64) *types.CommitInfo {
 	for _, key := range keys {
 		store := rs.stores[key]
 		storeType := store.GetStoreType()
-		if storeType == types.StoreTypeTransient || storeType == types.StoreTypeMemory {
+		if storeType == types.StoreTypeTransient || storeType == types.StoreTypeMemory || storeType == types.StoreTypeConsensusless {
 			continue
 		}
 		storeInfos = append(storeInfos, types.StoreInfo{
@@ -1182,7 +1208,7 @@ func commitStores(version int64, storeMap map[types.StoreKey]types.CommitKVStore
 		}
 
 		storeType := store.GetStoreType()
-		if storeType == types.StoreTypeTransient || storeType == types.StoreTypeMemory {
+		if storeType == types.StoreTypeTransient || storeType == types.StoreTypeMemory || storeType == types.StoreTypeConsensusless {
 			continue
 		}
 

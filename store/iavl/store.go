@@ -121,7 +121,6 @@ func (st *Store) GetImmutable(version int64) (*Store, error) {
 // version and hash.
 func (st *Store) Commit() types.CommitID {
 	defer st.metrics.MeasureSince("store", "iavl", "commit")
-
 	hash, version, err := st.tree.SaveVersion()
 	if err != nil {
 		panic(err)
