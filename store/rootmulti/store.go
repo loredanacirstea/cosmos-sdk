@@ -19,6 +19,7 @@ import (
 	errorsmod "cosmossdk.io/errors"
 	"cosmossdk.io/log"
 	"cosmossdk.io/store/cachemulti"
+	"cosmossdk.io/store/consensusless"
 	"cosmossdk.io/store/dbadapter"
 	"cosmossdk.io/store/iavl"
 	"cosmossdk.io/store/listenkv"
@@ -1052,27 +1053,30 @@ func (rs *Store) loadCommitStoreFromParams(key types.StoreKey, id types.CommitID
 		if _, ok := key.(*types.ConsensuslessStoreKey); !ok {
 			return nil, fmt.Errorf("unexpected key type for a ConsensuslessStoreKey; got: %s", key.String())
 		}
-		var store types.CommitKVStore
-		var err error
 
-		if params.initialVersion == 0 {
-			store, err = iavl.LoadStore(db, rs.logger, key, id, rs.iavlCacheSize, rs.iavlDisableFastNode, rs.metrics)
-		} else {
-			store, err = iavl.LoadStoreWithInitialVersion(db, rs.logger, key, id, params.initialVersion, rs.iavlCacheSize, rs.iavlDisableFastNode, rs.metrics)
-		}
+		return consensusless.NewStoreWithDB(&db), nil
 
-		if err != nil {
-			return nil, err
-		}
+		// var store types.CommitKVStore
+		// var err error
 
-		if rs.interBlockCache != nil {
-			// Wrap and get a CommitKVStore with inter-block caching. Note, this should
-			// only wrap the primary CommitKVStore, not any store that is already
-			// branched as that will create unexpected behavior.
-			store = rs.interBlockCache.GetStoreCache(key, store)
-		}
+		// if params.initialVersion == 0 {
+		// 	store, err = iavl.LoadStore(db, rs.logger, key, id, rs.iavlCacheSize, rs.iavlDisableFastNode, rs.metrics)
+		// } else {
+		// 	store, err = iavl.LoadStoreWithInitialVersion(db, rs.logger, key, id, params.initialVersion, rs.iavlCacheSize, rs.iavlDisableFastNode, rs.metrics)
+		// }
 
-		return store, err
+		// if err != nil {
+		// 	return nil, err
+		// }
+
+		// if rs.interBlockCache != nil {
+		// 	// Wrap and get a CommitKVStore with inter-block caching. Note, this should
+		// 	// only wrap the primary CommitKVStore, not any store that is already
+		// 	// branched as that will create unexpected behavior.
+		// 	store = rs.interBlockCache.GetStoreCache(key, store)
+		// }
+
+		// return store, err
 
 	default:
 		panic(fmt.Sprintf("unrecognized store type %v", params.typ))
