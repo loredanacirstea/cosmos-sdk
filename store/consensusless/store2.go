@@ -1,7 +1,6 @@
 package consensusless
 
 import (
-	"encoding/hex"
 	"fmt"
 	"io"
 
@@ -45,13 +44,11 @@ func (s Store) CacheWrapWithTrace(w io.Writer, tc types.TraceContext) types.Cach
 }
 
 func (s Store) Set(key, value []byte) {
-	fmt.Println("==STORE=Set=", hex.EncodeToString(key), hex.EncodeToString(value))
 	s.DB.Set(key, value)
 }
 
 // Commit performs a no-op as entries are persistent between commitments.
 func (s *Store) Commit() (id types.CommitID) {
-	fmt.Println("==STORE=Commit=")
 	batch := s.Store.NewBatch()
 	defer func() {
 		_ = batch.Close()
