@@ -193,6 +193,10 @@ type BaseApp struct {
 	//
 	// SAFETY: it's safe to do if validators validate the total gas wanted in the `ProcessProposal`, which is the case in the default handler.
 	disableBlockGasMeter bool
+
+	// caching for FinalizeBlock
+	responseFinalizeBlock  *abci.ResponseFinalizeBlock
+	parentCtxFinalizeBlock context.Context
 }
 
 // NewBaseApp returns a reference to an initialized BaseApp. It accepts a
@@ -742,7 +746,7 @@ func (app *BaseApp) beginBlock(req *abci.RequestFinalizeBlock) (sdk.BeginBlock, 
 	)
 
 	if app.beginBlocker != nil {
-		resp, err = app.beginBlocker(app.finalizeBlockState.Context())
+		resp, err = app.beginBlocker(app.finalizeBlockState.Context(), req)
 		if err != nil {
 			return resp, err
 		}
@@ -800,11 +804,11 @@ func (app *BaseApp) deliverTx(tx []byte) *abci.ExecTxResult {
 
 // endBlock is an application-defined function that is called after transactions
 // have been processed in FinalizeBlock.
-func (app *BaseApp) endBlock(ctx context.Context) (sdk.EndBlock, error) {
+func (app *BaseApp) endBlock(ctx context.Context, metadata []byte) (sdk.EndBlock, error) {
 	var endblock sdk.EndBlock
 
 	if app.endBlocker != nil {
-		eb, err := app.endBlocker(app.finalizeBlockState.Context())
+		eb, err := app.endBlocker(app.finalizeBlockState.Context(), metadata)
 		if err != nil {
 			return endblock, err
 		}

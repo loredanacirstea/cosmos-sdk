@@ -206,7 +206,7 @@ func TestAnteHandlerGasMeter(t *testing.T) {
 	}
 	// set the beginBlocker to use some gas
 	beginBlockerOpt := func(bapp *baseapp.BaseApp) {
-		bapp.SetBeginBlocker(func(ctx sdk.Context) (sdk.BeginBlock, error) {
+		bapp.SetBeginBlocker(func(ctx sdk.Context, req *abci.RequestFinalizeBlock) (sdk.BeginBlock, error) {
 			ctx.BlockGasMeter().ConsumeGas(1, "beginBlocker gas consumption")
 			return sdk.BeginBlock{}, nil
 		})

@@ -160,12 +160,12 @@ func (a *App) PreBlocker(ctx sdk.Context, _ *abci.RequestFinalizeBlock) (*sdk.Re
 }
 
 // BeginBlocker application updates every begin block
-func (a *App) BeginBlocker(ctx sdk.Context) (sdk.BeginBlock, error) {
+func (a *App) BeginBlocker(ctx sdk.Context, _ *abci.RequestFinalizeBlock) (sdk.BeginBlock, error) {
 	return a.ModuleManager.BeginBlock(ctx)
 }
 
 // EndBlocker application updates every end block
-func (a *App) EndBlocker(ctx sdk.Context) (sdk.EndBlock, error) {
+func (a *App) EndBlocker(ctx sdk.Context, _ []byte) (sdk.EndBlock, error) {
 	return a.ModuleManager.EndBlock(ctx)
 }
 
