@@ -184,6 +184,11 @@ type BaseApp struct {
 	// including the goroutine handling.This is experimental and must be enabled
 	// by developers.
 	optimisticExec *oe.OptimisticExecution
+
+	// caching for FinalizeBlock
+	requestFinalizeBlock   *abci.RequestFinalizeBlock
+	responseFinalizeBlock  *abci.ResponseFinalizeBlock
+	parentCtxFinalizeBlock context.Context
 }
 
 // NewBaseApp returns a reference to an initialized BaseApp. It accepts a
@@ -716,7 +721,7 @@ func (app *BaseApp) beginBlock(req *abci.RequestFinalizeBlock) (sdk.BeginBlock, 
 	)
 
 	if app.beginBlocker != nil {
-		resp, err = app.beginBlocker(app.finalizeBlockState.ctx)
+		resp, err = app.beginBlocker(app.finalizeBlockState.ctx, req)
 		if err != nil {
 			return resp, err
 		}
@@ -774,11 +779,11 @@ func (app *BaseApp) deliverTx(tx []byte) *abci.ExecTxResult {
 
 // endBlock is an application-defined function that is called after transactions
 // have been processed in FinalizeBlock.
-func (app *BaseApp) endBlock(ctx context.Context) (sdk.EndBlock, error) {
+func (app *BaseApp) endBlock(ctx context.Context, metadata []byte) (sdk.EndBlock, error) {
 	var endblock sdk.EndBlock
 
 	if app.endBlocker != nil {
-		eb, err := app.endBlocker(app.finalizeBlockState.ctx)
+		eb, err := app.endBlocker(app.finalizeBlockState.ctx, metadata)
 		if err != nil {
 			return endblock, err
 		}

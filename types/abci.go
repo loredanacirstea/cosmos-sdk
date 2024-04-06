@@ -45,7 +45,7 @@ type PreBlocker func(Context, *abci.RequestFinalizeBlock) (*ResponsePreBlock, er
 // as of CometBFT v0.38.0. This function type alias is provided for backwards
 // compatibility with applications that still use the BeginBlock ABCI method
 // and allows for existing BeginBlock functionality within applications.
-type BeginBlocker func(Context) (BeginBlock, error)
+type BeginBlocker func(Context, *abci.RequestFinalizeBlock) (BeginBlock, error)
 
 // EndBlocker defines a function type alias for executing application
 // business logic after transactions are executed but before committing.
@@ -54,7 +54,7 @@ type BeginBlocker func(Context) (BeginBlock, error)
 // as of CometBFT v0.38.0. This function type alias is provided for backwards
 // compatibility with applications that still use the EndBlock ABCI method
 // and allows for existing EndBlock functionality within applications.
-type EndBlocker func(Context) (EndBlock, error)
+type EndBlocker func(Context, []byte) (EndBlock, error)
 
 // EndBlock defines a type which contains endblock events and validator set updates
 type EndBlock struct {

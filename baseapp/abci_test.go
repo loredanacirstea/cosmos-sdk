@@ -220,7 +220,7 @@ func TestABCI_FinalizeBlock_WithBeginAndEndBlocker(t *testing.T) {
 	db := dbm.NewMemDB()
 	app := baseapp.NewBaseApp(name, log.NewTestLogger(t), db, nil)
 
-	app.SetBeginBlocker(func(ctx sdk.Context) (sdk.BeginBlock, error) {
+	app.SetBeginBlocker(func(ctx sdk.Context, _ *abci.RequestFinalizeBlock) (sdk.BeginBlock, error) {
 		return sdk.BeginBlock{
 			Events: []abci.Event{
 				{
@@ -236,7 +236,7 @@ func TestABCI_FinalizeBlock_WithBeginAndEndBlocker(t *testing.T) {
 		}, nil
 	})
 
-	app.SetEndBlocker(func(ctx sdk.Context) (sdk.EndBlock, error) {
+	app.SetEndBlocker(func(ctx sdk.Context, _ []byte) (sdk.EndBlock, error) {
 		return sdk.EndBlock{
 			Events: []abci.Event{
 				{

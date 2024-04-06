@@ -22,10 +22,10 @@ type AppI interface {
 	LegacyAmino() *codec.LegacyAmino
 
 	// Application updates every begin block.
-	BeginBlocker(ctx sdk.Context) (sdk.BeginBlock, error)
+	BeginBlocker(ctx sdk.Context, req *abci.RequestFinalizeBlock) (sdk.BeginBlock, error)
 
 	// Application updates every end block.
-	EndBlocker(ctx sdk.Context) (sdk.EndBlock, error)
+	EndBlocker(ctx sdk.Context, metadata []byte) (sdk.EndBlock, error)
 
 	// Application update at chain (i.e app) initialization.
 	InitChainer(ctx sdk.Context, req *abci.RequestInitChain) (*abci.ResponseInitChain, error)

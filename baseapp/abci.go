@@ -691,14 +691,69 @@ func (app *BaseApp) VerifyVoteExtension(req *abci.RequestVerifyVoteExtension) (r
 // only used to handle early cancellation, for anything related to state app.finalizeBlockState.ctx
 // must be used.
 func (app *BaseApp) internalFinalizeBlock(ctx context.Context, req *abci.RequestFinalizeBlock) (*abci.ResponseFinalizeBlock, error) {
-	var events []abci.Event
+	if app.responseFinalizeBlock == nil {
+		return nil, fmt.Errorf("cannot finalize block: missing responseFinalizeBlock, must call BeginBlock")
+	}
+	if app.finalizeBlockState == nil {
+		return nil, fmt.Errorf("cannot finalize block: missing finalizeBlockState, must call BeginBlock")
+	}
 
+	// Iterate over all raw transactions in the proposal and attempt to execute
+	// them, gathering the execution results.
+	//
+	// NOTE: Not all raw transactions may adhere to the sdk.Tx interface, e.g.
+	// vote extensions, so skip those.
+	txResults := make([]*abci.ExecTxResult, 0, len(req.Txs))
+	for _, rawTx := range req.Txs {
+		var response *abci.ExecTxResult
+
+		if _, err := app.txDecoder(rawTx); err == nil {
+			response = app.deliverTx(rawTx)
+		} else {
+			// In the case where a transaction included in a block proposal is malformed,
+			// we still want to return a default response to comet. This is because comet
+			// expects a response for each transaction included in a block proposal.
+			response = sdkerrors.ResponseExecTxResultWithEvents(
+				sdkerrors.ErrTxDecode,
+				0,
+				0,
+				nil,
+				false,
+			)
+		}
+
+		// check after every tx if we should abort
+		select {
+		case <-ctx.Done():
+			return nil, ctx.Err()
+		default:
+			// continue
+		}
+
+		txResults = append(txResults, response)
+	}
+
+	if app.finalizeBlockState.ms.TracingEnabled() {
+		app.finalizeBlockState.ms = app.finalizeBlockState.ms.SetTracingContext(nil).(storetypes.CacheMultiStore)
+	}
+
+	events := app.responseFinalizeBlock.Events
+	app.responseFinalizeBlock = &abci.ResponseFinalizeBlock{
+		Events:    events,
+		TxResults: txResults,
+	}
+	return app.responseFinalizeBlock, nil
+}
+
+func (app *BaseApp) BeginBlock(req *abci.RequestFinalizeBlock) (sdk.BeginBlock, error) {
+	ctx := context.Background()
+	app.parentCtxFinalizeBlock = ctx
 	if err := app.checkHalt(req.Height, req.Time); err != nil {
-		return nil, err
+		return sdk.BeginBlock{}, err
 	}
 
 	if err := app.validateFinalizeBlockHeight(req); err != nil {
-		return nil, err
+		return sdk.BeginBlock{}, err
 	}
 
 	if app.cms.TracingEnabled() {
@@ -755,65 +810,35 @@ func (app *BaseApp) internalFinalizeBlock(ctx context.Context, req *abci.Request
 	}
 
 	if err := app.preBlock(req); err != nil {
-		return nil, err
+		return sdk.BeginBlock{}, err
 	}
 
 	beginBlock, err := app.beginBlock(req)
 	if err != nil {
-		return nil, err
+		return sdk.BeginBlock{}, err
 	}
 
 	// First check for an abort signal after beginBlock, as it's the first place
 	// we spend any significant amount of time.
 	select {
 	case <-ctx.Done():
-		return nil, ctx.Err()
+		return sdk.BeginBlock{}, ctx.Err()
 	default:
 		// continue
 	}
 
-	events = append(events, beginBlock.Events...)
-
-	// Iterate over all raw transactions in the proposal and attempt to execute
-	// them, gathering the execution results.
-	//
-	// NOTE: Not all raw transactions may adhere to the sdk.Tx interface, e.g.
-	// vote extensions, so skip those.
-	txResults := make([]*abci.ExecTxResult, 0, len(req.Txs))
-	for _, rawTx := range req.Txs {
-		var response *abci.ExecTxResult
-
-		if _, err := app.txDecoder(rawTx); err == nil {
-			response = app.deliverTx(rawTx)
-		} else {
-			// In the case where a transaction included in a block proposal is malformed,
-			// we still want to return a default response to comet. This is because comet
-			// expects a response for each transaction included in a block proposal.
-			response = sdkerrors.ResponseExecTxResultWithEvents(
-				sdkerrors.ErrTxDecode,
-				0,
-				0,
-				nil,
-				false,
-			)
-		}
-
-		// check after every tx if we should abort
-		select {
-		case <-ctx.Done():
-			return nil, ctx.Err()
-		default:
-			// continue
-		}
-
-		txResults = append(txResults, response)
+	app.responseFinalizeBlock = &abci.ResponseFinalizeBlock{
+		Events: beginBlock.Events,
 	}
+	return beginBlock, nil
+}
 
-	if app.finalizeBlockState.ms.TracingEnabled() {
-		app.finalizeBlockState.ms = app.finalizeBlockState.ms.SetTracingContext(nil).(storetypes.CacheMultiStore)
+func (app *BaseApp) EndBlock(metadata []byte) (*abci.ResponseFinalizeBlock, error) {
+	ctx := app.parentCtxFinalizeBlock
+	if ctx == nil {
+		return nil, fmt.Errorf("cannot EndBlock: missing ctx")
 	}
-
-	endBlock, err := app.endBlock(app.finalizeBlockState.ctx)
+	endBlock, err := app.endBlock(app.finalizeBlockState.ctx, metadata)
 	if err != nil {
 		return nil, err
 	}
@@ -826,15 +851,17 @@ func (app *BaseApp) internalFinalizeBlock(ctx context.Context, req *abci.Request
 		// continue
 	}
 
-	events = append(events, endBlock.Events...)
+	resp := app.responseFinalizeBlock
+	events := append(resp.Events, endBlock.Events...)
 	cp := app.GetConsensusParams(app.finalizeBlockState.ctx)
 
-	return &abci.ResponseFinalizeBlock{
-		Events:                events,
-		TxResults:             txResults,
-		ValidatorUpdates:      endBlock.ValidatorUpdates,
-		ConsensusParamUpdates: &cp,
-	}, nil
+	resp.Events = events
+	resp.ValidatorUpdates = endBlock.ValidatorUpdates
+	resp.ConsensusParamUpdates = &cp
+	resp.AppHash = app.workingHash()
+
+	app.responseFinalizeBlock = nil
+	return resp, nil
 }
 
 // FinalizeBlock will execute the block proposal provided by RequestFinalizeBlock.
@@ -868,7 +895,52 @@ func (app *BaseApp) FinalizeBlock(req *abci.RequestFinalizeBlock) (*abci.Respons
 	}
 
 	// if no OE is running, just run the block (this is either a block replay or a OE that got aborted)
-	res, err := app.internalFinalizeBlock(context.Background(), req)
+	_, err := app.BeginBlock(req)
+	if err != nil {
+		return nil, err
+	}
+	ctx := app.parentCtxFinalizeBlock
+	if ctx == nil {
+		ctx = context.Background()
+	}
+	res, err := app.internalFinalizeBlock(ctx, req)
+	if err != nil {
+		return nil, err
+	}
+
+	res, err = app.EndBlock(make([]byte, 0))
+	if err != nil {
+		return nil, err
+	}
+	return res, err
+}
+
+func (app *BaseApp) FinalizeBlockSimple(req *abci.RequestFinalizeBlock) (*abci.ResponseFinalizeBlock, error) {
+	if app.optimisticExec.Initialized() {
+		// check if the hash we got is the same as the one we are executing
+		aborted := app.optimisticExec.AbortIfNeeded(req.Hash)
+		// Wait for the OE to finish, regardless of whether it was aborted or not
+		res, err := app.optimisticExec.WaitResult()
+
+		// only return if we are not aborting
+		if !aborted {
+			if res != nil {
+				res.AppHash = app.workingHash()
+			}
+			return res, err
+		}
+
+		// if it was aborted, we need to reset the state
+		app.finalizeBlockState = nil
+		app.optimisticExec.Reset()
+	}
+
+	// if no OE is running, just run the block (this is either a block replay or a OE that got aborted)
+	ctx := app.parentCtxFinalizeBlock
+	if ctx == nil {
+		ctx = context.Background()
+	}
+	res, err := app.internalFinalizeBlock(ctx, req)
 	if res != nil {
 		res.AppHash = app.workingHash()
 	}
