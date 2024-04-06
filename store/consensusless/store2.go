@@ -18,8 +18,6 @@ var (
 	_ types.Committer = (*Store)(nil)
 )
 
-// Store implements an in-memory only KVStore. Entries are persisted between
-// commits and thus between blocks. State in Memory store is not committed as part of app state but maintained privately by each node
 type Store struct {
 	dbadapter.Store
 }
@@ -47,6 +45,14 @@ func (s Store) Set(key, value []byte) {
 	s.DB.Set(key, value)
 }
 
+func (s Store) Delete(key []byte) {
+	s.DB.Delete(key)
+}
+
+func (s Store) Write() {
+	fmt.Println("consensusless storage Write() not implemented")
+}
+
 // Commit performs a no-op as entries are persistent between commitments.
 func (s *Store) Commit() (id types.CommitID) {
 	batch := s.Store.NewBatch()
@@ -68,6 +74,12 @@ func (s *Store) GetPruning() pruningtypes.PruningOptions {
 	return pruningtypes.NewPruningOptions(pruningtypes.PruningUndefined)
 }
 
-func (s Store) LastCommitID() (id types.CommitID) { return }
+func (s Store) LastCommitID() (id types.CommitID) {
+	// fmt.Println("consensusless storage LastCommitID() not implemented")
+	return
+}
 
-func (s Store) WorkingHash() (hash []byte) { return }
+func (s Store) WorkingHash() (hash []byte) {
+	// fmt.Println("consensusless storage WorkingHash() not implemented")
+	return make([]byte, 0)
+}
