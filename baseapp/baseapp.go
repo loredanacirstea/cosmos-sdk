@@ -245,6 +245,11 @@ func NewBaseApp(
 	return app
 }
 
+// SetChainID sets the chain ID in BaseApp.
+func (app *BaseApp) SetChainID(chainID string) {
+	app.chainID = chainID
+}
+
 // Name returns the name of the BaseApp.
 func (app *BaseApp) Name() string {
 	return app.name
@@ -974,6 +979,10 @@ func (app *BaseApp) runTx(mode execMode, txBytes []byte) (gInfo sdk.GasInfo, res
 	return gInfo, result, anteEvents, err
 }
 
+type MsgWithChainId interface {
+	GetChainID() string
+}
+
 // runMsgs iterates through a list of messages and executes them with the provided
 // Context and execution mode. Messages will only be executed during simulation
 // and DeliverTx. An error is returned if any single message fails or if a
@@ -983,11 +992,20 @@ func (app *BaseApp) runMsgs(ctx sdk.Context, msgs []sdk.Msg, msgsV2 []protov2.Me
 	events := sdk.EmptyEvents()
 	var msgResponses []*codectypes.Any
 
+	chainID := app.chainID
+
 	// NOTE: GasWanted is determined by the AnteHandler and GasUsed by the GasMeter.
 	for i, msg := range msgs {
 		if mode != execModeFinalize && mode != execModeSimulate {
 			break
 		}
+
+		withChainID, ok := msg.(MsgWithChainId)
+		if ok {
+			chainID = withChainID.GetChainID()
+		}
+		app.SetChainID(chainID)
+		ctx = ctx.WithChainID(chainID)
 
 		handler := app.msgServiceRouter.Handler(msg)
 		if handler == nil {
