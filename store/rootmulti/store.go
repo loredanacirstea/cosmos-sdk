@@ -181,7 +181,7 @@ func (rs *Store) StoreKeysByName() map[string]types.StoreKey {
 
 // LoadLatestVersionAndUpgrade implements CommitMultiStore
 func (rs *Store) LoadLatestVersionAndUpgrade(upgrades *types.StoreUpgrades) error {
-	ver := GetLatestVersion(rs.db)
+	ver := GetLatestVersion(rs.db, rs.commitHeader.ChainID)
 	return rs.loadVersion(ver, upgrades)
 }
 
@@ -192,7 +192,7 @@ func (rs *Store) LoadVersionAndUpgrade(ver int64, upgrades *types.StoreUpgrades)
 
 // LoadLatestVersion implements CommitMultiStore.
 func (rs *Store) LoadLatestVersion() error {
-	ver := GetLatestVersion(rs.db)
+	ver := GetLatestVersion(rs.db, rs.commitHeader.ChainID)
 	return rs.loadVersion(ver, nil)
 }
 
@@ -443,7 +443,7 @@ func (rs *Store) LastCommitID() types.CommitID {
 		emptyHash := sha256.Sum256([]byte{})
 		appHash := emptyHash[:]
 		return types.CommitID{
-			Version: GetLatestVersion(rs.db),
+			Version: GetLatestVersion(rs.db, rs.commitHeader.ChainID),
 			Hash:    appHash, // set empty apphash to sha256([]byte{}) if info is nil
 		}
 	}
@@ -818,7 +818,7 @@ func (rs *Store) Snapshot(height uint64, protoWriter protoio.Writer) error {
 	if height == 0 {
 		return errorsmod.Wrap(types.ErrLogic, "cannot snapshot height 0")
 	}
-	if height > uint64(GetLatestVersion(rs.db)) {
+	if height > uint64(GetLatestVersion(rs.db, rs.commitHeader.ChainID)) {
 		return errorsmod.Wrapf(types.ErrLogic, "cannot snapshot future height %v", height)
 	}
 
@@ -1165,7 +1165,7 @@ func (rs *Store) flushMetadata(db dbm.DB, version int64, cInfo *types.CommitInfo
 		rs.logger.Debug("commitInfo is nil, not flushed", "height", version)
 	}
 
-	flushLatestVersion(batch, version)
+	flushLatestVersion(batch, version, rs.commitHeader.ChainID)
 
 	if err := batch.WriteSync(); err != nil {
 		panic(fmt.Errorf("error on batch write %w", err))
@@ -1189,8 +1189,8 @@ func newStoreParams(key types.StoreKey, db dbm.DB, typ types.StoreType, initialV
 	}
 }
 
-func GetLatestVersion(db dbm.DB) int64 {
-	bz, err := db.Get([]byte(latestVersionKey))
+func GetLatestVersion(db dbm.DB, chainId string) int64 {
+	bz, err := db.Get([]byte(getLatestVersionKey(chainId)))
 	if err != nil {
 		panic(err)
 	} else if bz == nil {
@@ -1262,14 +1262,18 @@ func flushCommitInfo(batch dbm.Batch, version int64, cInfo *types.CommitInfo) {
 	}
 }
 
-func flushLatestVersion(batch dbm.Batch, version int64) {
+func flushLatestVersion(batch dbm.Batch, version int64, chainId string) {
 	bz, err := gogotypes.StdInt64Marshal(version)
 	if err != nil {
 		panic(err)
 	}
 
-	err = batch.Set([]byte(latestVersionKey), bz)
+	err = batch.Set([]byte(getLatestVersionKey(chainId)), bz)
 	if err != nil {
 		panic(err)
 	}
+}
+
+func getLatestVersionKey(chainId string) string {
+	return latestVersionKey + "/" + chainId
 }
