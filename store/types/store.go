@@ -5,6 +5,7 @@ import (
 	"io"
 
 	"github.com/cometbft/cometbft/proto/tendermint/crypto"
+	cmtproto "github.com/cometbft/cometbft/proto/tendermint/types"
 	dbm "github.com/cosmos/cosmos-db"
 
 	"cosmossdk.io/store/metrics"
@@ -224,6 +225,8 @@ type CommitMultiStore interface {
 
 	// SetMetrics sets the metrics for the KVStore
 	SetMetrics(metrics metrics.StoreMetrics)
+
+	SetCommitHeader(h cmtproto.Header)
 }
 
 //---------subsp-------------------------------

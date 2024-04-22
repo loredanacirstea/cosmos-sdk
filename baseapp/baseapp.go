@@ -365,6 +365,9 @@ func (app *BaseApp) MountStore(key storetypes.StoreKey, typ storetypes.StoreType
 // LoadLatestVersion loads the latest application version. It will panic if
 // called more than once on a running BaseApp.
 func (app *BaseApp) LoadLatestVersion() error {
+	emptyHeader := cmtproto.Header{ChainID: app.chainID}
+	app.cms.SetCommitHeader(emptyHeader)
+
 	err := app.storeLoader(app.cms)
 	if err != nil {
 		return fmt.Errorf("failed to load latest version: %w", err)
