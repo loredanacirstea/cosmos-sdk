@@ -64,6 +64,7 @@ func newReflectionServiceServer(grpcSrv *grpc.Server, conf Config) (reflectionSe
 	// set configuration descriptor
 	configurationDescriptor := &ConfigurationDescriptor{
 		Bech32AccountAddressPrefix: conf.SdkConfig.GetBech32AccountAddrPrefix(),
+		// Bech32AccountAddressPrefix: sdk.GetConfig().GetBech32AccountAddrPrefix(),
 	}
 	// set codec descriptor
 	codecDescriptor, err := newCodecDescriptor(conf.InterfaceRegistry)
