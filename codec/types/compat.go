@@ -1,6 +1,7 @@
 package types
 
 import (
+	"encoding/base64"
 	"fmt"
 	"reflect"
 	"runtime/debug"
@@ -174,6 +175,7 @@ func (a AminoJSONPacker) UnpackAny(any *Any, _ interface{}) error {
 		return err
 	}
 	bz, err := a.Cdc.MarshalJSON(any.cachedValue)
+	bz = []byte(fmt.Sprintf(`{"type_url":"%s","value":"%s"}`, any.TypeUrl, base64.StdEncoding.EncodeToString(bz)))
 	any.compat = &anyCompat{
 		jsonBz: bz,
 		err:    err,
@@ -200,11 +202,14 @@ func (a ProtoJSONPacker) UnpackAny(any *Any, _ interface{}) error {
 		}
 	}
 
-	bz, err := a.JSONPBMarshaler.MarshalToString(any)
+	// MarshalToString tries to marshalAny, which unmarshals the wrapped message, hence removes all the previously unpacked any messages
+	bz, err := a.JSONPBMarshaler.MarshalToString(any.cachedValue.(proto.Message))
+	bz = fmt.Sprintf(`{"type_url":"%s","value":"%s"}`, any.TypeUrl, base64.StdEncoding.EncodeToString([]byte(bz)))
 	any.compat = &anyCompat{
 		jsonBz: []byte(bz),
 		err:    err,
 	}
 
-	return err
+	// return err
+	return nil
 }
