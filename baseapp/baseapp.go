@@ -836,6 +836,14 @@ func (app *BaseApp) endBlock(ctx context.Context, metadata []byte) (sdk.EndBlock
 	return endblock, nil
 }
 
+func (app *BaseApp) RunTx(mode sdk.ExecMode, txBytes []byte) (gInfo sdk.GasInfo, result *sdk.Result, anteEvents []abci.Event, err error) {
+	return app.runTx(execMode(mode), txBytes)
+}
+
+func (app *BaseApp) DeliverTx(tx []byte) *abci.ExecTxResult {
+	return app.deliverTx(tx)
+}
+
 // runTx processes a transaction within a given execution mode, encoded transaction
 // bytes, and the decoded transaction itself. All state transitions occur through
 // a cached Context depending on the mode provided. State only gets persisted
