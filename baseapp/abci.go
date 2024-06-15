@@ -1207,6 +1207,7 @@ func (app *BaseApp) handleQueryGRPC(handler GRPCQueryHandler, req *abci.RequestQ
 	if err != nil {
 		return sdkerrors.QueryResult(err, app.trace)
 	}
+	ctx = ctx.WithExecMode(sdk.ExecModeQuery)
 
 	resp, err := handler(ctx, req)
 	if err != nil {

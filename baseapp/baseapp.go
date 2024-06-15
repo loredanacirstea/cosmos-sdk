@@ -54,6 +54,7 @@ const (
 	execModeVoteExtension                       // Extend or verify a pre-commit vote
 	execModeVerifyVoteExtension                 // Verify a vote extension
 	execModeFinalize                            // Finalize a block proposal
+	execModeQuery
 )
 
 var _ servertypes.ABCI = (*BaseApp)(nil)
