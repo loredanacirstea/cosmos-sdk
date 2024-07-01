@@ -27,6 +27,10 @@ node = "{{ .Node }}"
 broadcast-mode = "{{ .BroadcastMode }}"
 `
 
+func WriteConfigToFile(configFilePath string, config *ClientConfig) error {
+	return writeConfigToFile(configFilePath, config)
+}
+
 // writeConfigToFile parses defaultConfigTemplate, renders config using the template and writes it to
 // configFilePath.
 func writeConfigToFile(configFilePath string, config *ClientConfig) error {
