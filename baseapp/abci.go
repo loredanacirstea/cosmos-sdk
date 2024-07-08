@@ -689,7 +689,29 @@ func (app *BaseApp) VerifyVoteExtension(req *abci.RequestVerifyVoteExtension) (r
 // Execution flow or by the FinalizeBlock ABCI fethod. The context received is
 // only used to handle early cancellation, for anything related to state app.finalizeBlockState.Context()
 // must be used.
-func (app *BaseApp) internalFinalizeBlock(ctx context.Context, req *abci.RequestFinalizeBlock) (*abci.ResponseFinalizeBlock, error) {
+func (app *BaseApp) internalFinalizeBlock(_ context.Context, req *abci.RequestFinalizeBlock) (*abci.ResponseFinalizeBlock, error) {
+	// if no OE is running, just run the block (this is either a block replay or a OE that got aborted)
+	_, err := app.BeginBlock(req)
+	if err != nil {
+		return nil, err
+	}
+	ctx := app.parentCtxFinalizeBlock
+	if ctx == nil {
+		ctx = context.Background()
+	}
+	_, err = app.internalFinalizeBlockSimple(ctx, req)
+	if err != nil {
+		return nil, err
+	}
+
+	res, err := app.EndBlock(make([]byte, 0))
+	if err != nil {
+		return nil, err
+	}
+	return res, err
+}
+
+func (app *BaseApp) internalFinalizeBlockSimple(ctx context.Context, req *abci.RequestFinalizeBlock) (*abci.ResponseFinalizeBlock, error) {
 	if app.responseFinalizeBlock == nil {
 		return nil, fmt.Errorf("cannot finalize block: missing responseFinalizeBlock, must call BeginBlock")
 	}
@@ -908,32 +930,27 @@ func (app *BaseApp) FinalizeBlock(req *abci.RequestFinalizeBlock) (res *abci.Res
 	}
 
 	// if no OE is running, just run the block (this is either a block replay or a OE that got aborted)
-	_, err = app.BeginBlock(req)
-	if err != nil {
-		return nil, err
-	}
-	ctx := app.parentCtxFinalizeBlock
-	if ctx == nil {
-		ctx = context.Background()
-	}
-	res, err = app.internalFinalizeBlock(ctx, req)
-	if err != nil {
-		return nil, err
-	}
-
-	res, err = app.EndBlock(make([]byte, 0))
-	if err != nil {
-		return nil, err
+	res, err = app.internalFinalizeBlock(context.Background(), req)
+	if res != nil {
+		res.AppHash = app.workingHash()
 	}
 	return res, err
 }
 
-func (app *BaseApp) FinalizeBlockSimple(req *abci.RequestFinalizeBlock) (*abci.ResponseFinalizeBlock, error) {
+func (app *BaseApp) FinalizeBlockSimple(req *abci.RequestFinalizeBlock) (res *abci.ResponseFinalizeBlock, err error) {
+	defer func() {
+		// call the streaming service hooks with the FinalizeBlock messages
+		for _, streamingListener := range app.streamingManager.ABCIListeners {
+			if err := streamingListener.ListenFinalizeBlock(app.finalizeBlockState.Context(), *req, *res); err != nil {
+				app.logger.Error("ListenFinalizeBlock listening hook failed", "height", req.Height, "err", err)
+			}
+		}
+	}()
 	if app.optimisticExec.Initialized() {
 		// check if the hash we got is the same as the one we are executing
 		aborted := app.optimisticExec.AbortIfNeeded(req.Hash)
 		// Wait for the OE to finish, regardless of whether it was aborted or not
-		res, err := app.optimisticExec.WaitResult()
+		res, err = app.optimisticExec.WaitResult()
 
 		// only return if we are not aborting
 		if !aborted {
@@ -953,7 +970,7 @@ func (app *BaseApp) FinalizeBlockSimple(req *abci.RequestFinalizeBlock) (*abci.R
 	if ctx == nil {
 		ctx = context.Background()
 	}
-	res, err := app.internalFinalizeBlock(ctx, req)
+	res, err = app.internalFinalizeBlockSimple(ctx, req)
 	if res != nil {
 		res.AppHash = app.workingHash()
 	}

@@ -33,6 +33,7 @@ type OptimisticExecution struct {
 
 	// debugging/testing options
 	abortRate int // number from 0 to 100 that determines the percentage of OE that should be aborted
+	enabled   bool
 }
 
 // NewOptimisticExecution initializes the Optimistic Execution context but does not start it.
@@ -65,8 +66,16 @@ func (oe *OptimisticExecution) Reset() {
 	oe.initialized = false
 }
 
+func (oe *OptimisticExecution) Enable() {
+	oe.enabled = true
+}
+
+func (oe *OptimisticExecution) Disable() {
+	oe.enabled = false
+}
+
 func (oe *OptimisticExecution) Enabled() bool {
-	return oe != nil
+	return oe != nil && oe.enabled
 }
 
 // Initialized returns true if the OE was initialized, meaning that it contains

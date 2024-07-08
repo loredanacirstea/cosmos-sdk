@@ -1208,3 +1208,12 @@ func (app *BaseApp) Close() error {
 
 	return errors.Join(errs...)
 }
+
+// SetOptimisticExecution enables optimistic execution
+func (app *BaseApp) SetOptimisticExecution(opts ...func(*oe.OptimisticExecution)) {
+	app.optimisticExec = oe.NewOptimisticExecution(app.logger, app.internalFinalizeBlock, opts...)
+}
+
+func (app *BaseApp) GetOptimisticExecution() *oe.OptimisticExecution {
+	return app.optimisticExec
+}
