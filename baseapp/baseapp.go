@@ -1211,7 +1211,7 @@ func (app *BaseApp) Close() error {
 
 // SetOptimisticExecution enables optimistic execution
 func (app *BaseApp) SetOptimisticExecution(opts ...func(*oe.OptimisticExecution)) {
-	app.optimisticExec = oe.NewOptimisticExecution(app.logger, app.internalFinalizeBlock, opts...)
+	app.optimisticExec = oe.NewOptimisticExecution(app.logger, app.internalFinalizeBlockSimple, opts...)
 }
 
 func (app *BaseApp) GetOptimisticExecution() *oe.OptimisticExecution {

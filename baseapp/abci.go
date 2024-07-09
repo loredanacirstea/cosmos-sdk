@@ -889,6 +889,14 @@ func (app *BaseApp) EndBlock(metadata []byte) (*abci.ResponseFinalizeBlock, erro
 	return resp, nil
 }
 
+func (app *BaseApp) OptimisticExecution(req *abci.RequestProcessProposal, resp *abci.ResponseProcessProposal) {
+	if resp.Status == abci.ResponseProcessProposal_ACCEPT &&
+		app.optimisticExec.Enabled() &&
+		req.Height > app.initialHeight {
+		app.optimisticExec.Execute(req)
+	}
+}
+
 // FinalizeBlock will execute the block proposal provided by RequestFinalizeBlock.
 // Specifically, it will execute an application's BeginBlock (if defined), followed
 // by the transactions in the proposal, finally followed by the application's
