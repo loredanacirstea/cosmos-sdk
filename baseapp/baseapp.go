@@ -312,6 +312,9 @@ func (app *BaseApp) MountStores(keys ...storetypes.StoreKey) {
 		case *storetypes.MemoryStoreKey:
 			app.MountStore(key, storetypes.StoreTypeMemory)
 
+		case *storetypes.ConsensusMetaStoreKey:
+			app.MountStore(key, storetypes.StoreTypeConsensusMeta)
+
 		case *storetypes.ConsensuslessStoreKey:
 			app.MountStore(key, storetypes.StoreTypeConsensusless)
 
@@ -362,6 +365,17 @@ func (app *BaseApp) MountConsensuslessStores(keys map[string]*storetypes.Consens
 	for _, key := range skeys {
 		clKey := keys[key]
 		app.MountStore(clKey, storetypes.StoreTypeConsensusless)
+	}
+}
+
+// MountConsensusMetaStores mounts all in-memory KVStores with the BaseApp's internal
+// commit multi-store.
+func (app *BaseApp) MountConsensusMetaStores(keys map[string]*storetypes.ConsensusMetaStoreKey) {
+	skeys := maps.Keys(keys)
+	sort.Strings(skeys)
+	for _, key := range skeys {
+		clKey := keys[key]
+		app.MountStore(clKey, storetypes.StoreTypeConsensusMeta)
 	}
 }
 

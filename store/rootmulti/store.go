@@ -20,6 +20,7 @@ import (
 	"cosmossdk.io/log"
 	"cosmossdk.io/store/cachemulti"
 	"cosmossdk.io/store/consensusless"
+	"cosmossdk.io/store/consensusmeta"
 	"cosmossdk.io/store/dbadapter"
 	"cosmossdk.io/store/iavl"
 	"cosmossdk.io/store/listenkv"
@@ -836,6 +837,12 @@ func (rs *Store) Snapshot(height uint64, protoWriter protoio.Writer) error {
 		case *transient.Store, *mem.Store:
 			// Non-persisted stores shouldn't be snapshotted
 			continue
+		case *consensusmeta.Store:
+			// stores = append(stores, namedStore{name: key.Name(), Store: store})
+			continue
+		case *consensusless.Store:
+			// non-deterministic meta-consensus stores shouldn't be snapshotted
+			continue
 		default:
 			return errorsmod.Wrapf(types.ErrLogic,
 				"don't know how to snapshot store %q of type %T", key.Name(), store)
@@ -941,6 +948,16 @@ loop:
 			if !ok || store == nil {
 				return snapshottypes.SnapshotItem{}, errorsmod.Wrapf(types.ErrLogic, "cannot import into non-IAVL store %q", item.Store.Name)
 			}
+
+			if store.LastCommitID().Version == 1 {
+				rs.logger.Info("reverting store version to 0", "name", item.Store.Name)
+				err = store.LoadVersionForOverwriting(0)
+				store.Reset()
+				if err != nil {
+					return snapshottypes.SnapshotItem{}, errorsmod.Wrap(err, "rolling back version 1 failed")
+				}
+			}
+
 			importer, err = store.Import(int64(height))
 			if err != nil {
 				return snapshottypes.SnapshotItem{}, errorsmod.Wrap(err, "import failed")
@@ -1049,6 +1066,13 @@ func (rs *Store) loadCommitStoreFromParams(key types.StoreKey, id types.CommitID
 
 		return mem.NewStore(), nil
 
+	case types.StoreTypeConsensusMeta:
+		if _, ok := key.(*types.ConsensusMetaStoreKey); !ok {
+			return nil, fmt.Errorf("unexpected key type for a ConsensusMetaStoreKey; got: %s", key.String())
+		}
+
+		return consensusmeta.NewStoreWithDB(&db), nil
+
 	case types.StoreTypeConsensusless:
 		if _, ok := key.(*types.ConsensuslessStoreKey); !ok {
 			return nil, fmt.Errorf("unexpected key type for a ConsensuslessStoreKey; got: %s", key.String())
@@ -1089,7 +1113,7 @@ func (rs *Store) buildCommitInfo(version int64) *types.CommitInfo {
 	for _, key := range keys {
 		store := rs.stores[key]
 		storeType := store.GetStoreType()
-		if storeType == types.StoreTypeTransient || storeType == types.StoreTypeMemory || storeType == types.StoreTypeConsensusless {
+		if storeType == types.StoreTypeTransient || storeType == types.StoreTypeMemory || storeType == types.StoreTypeConsensusless || storeType == types.StoreTypeConsensusMeta {
 			continue
 		}
 		storeInfos = append(storeInfos, types.StoreInfo{
@@ -1227,7 +1251,7 @@ func commitStores(version int64, storeMap map[types.StoreKey]types.CommitKVStore
 		}
 
 		storeType := store.GetStoreType()
-		if storeType == types.StoreTypeTransient || storeType == types.StoreTypeMemory || storeType == types.StoreTypeConsensusless {
+		if storeType == types.StoreTypeTransient || storeType == types.StoreTypeMemory || storeType == types.StoreTypeConsensusless || storeType == types.StoreTypeConsensusMeta {
 			continue
 		}
 

@@ -335,6 +335,7 @@ const (
 	StoreTypeMemory
 	StoreTypeSMT
 	StoreTypePersistent
+	StoreTypeConsensusMeta
 	StoreTypeConsensusless
 )
 
@@ -363,6 +364,9 @@ func (st StoreType) String() string {
 
 	case StoreTypeConsensusless:
 		return "StoreTypeConsensusless"
+
+	case StoreTypeConsensusMeta:
+		return "StoreTypeConsensusMeta"
 	}
 
 	return "unknown store type"
@@ -459,6 +463,25 @@ func (key *MemoryStoreKey) Name() string {
 // String returns a stringified representation of the MemoryStoreKey.
 func (key *MemoryStoreKey) String() string {
 	return fmt.Sprintf("MemoryStoreKey{%p, %s}", key, key.name)
+}
+
+// ConsensusMetaStoreKey defines a typed key to be used with an in-memory KVStore.
+type ConsensusMetaStoreKey struct {
+	name string
+}
+
+func NewConsensusMetaStoreKey(name string) *ConsensusMetaStoreKey {
+	return &ConsensusMetaStoreKey{name: name}
+}
+
+// Name returns the name of the ConsensusMetaStoreKey.
+func (key *ConsensusMetaStoreKey) Name() string {
+	return key.name
+}
+
+// String returns a stringified representation of the ConsensusMetaStoreKey.
+func (key *ConsensusMetaStoreKey) String() string {
+	return fmt.Sprintf("ConsensusMetaStoreKey{%p, %s}", key, key.name)
 }
 
 // ConsensuslessStoreKey defines a typed key to be used with an in-memory KVStore.
@@ -568,6 +591,20 @@ func NewConsensuslessStoreKeys(names ...string) map[string]*ConsensuslessStoreKe
 	keys := make(map[string]*ConsensuslessStoreKey)
 	for _, n := range names {
 		keys[n] = NewConsensuslessStoreKey(n)
+	}
+
+	return keys
+}
+
+// NewConsensusMetaStoreKeys constructs a new map matching store key names to their
+// respective ConsensusMetaStoreKey references.
+// The function will panic if there is a potential conflict in names (see `assertNoPrefix`
+// function for more details).
+func NewConsensusMetaStoreKeys(names ...string) map[string]*ConsensusMetaStoreKey {
+	assertNoCommonPrefix(names)
+	keys := make(map[string]*ConsensusMetaStoreKey)
+	for _, n := range names {
+		keys[n] = NewConsensusMetaStoreKey(n)
 	}
 
 	return keys
