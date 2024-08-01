@@ -1231,3 +1231,8 @@ func (app *BaseApp) SetOptimisticExecution(opts ...func(*oe.OptimisticExecution)
 func (app *BaseApp) GetOptimisticExecution() *oe.OptimisticExecution {
 	return app.optimisticExec
 }
+
+// SetChainID sets the chain ID in BaseApp.
+func (app *BaseApp) ResetStores() error {
+	return app.cms.ResetStores()
+}

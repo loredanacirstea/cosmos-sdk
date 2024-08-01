@@ -227,6 +227,8 @@ type CommitMultiStore interface {
 	SetMetrics(metrics metrics.StoreMetrics)
 
 	SetCommitHeader(h cmtproto.Header)
+
+	ResetStores() error
 }
 
 //---------subsp-------------------------------

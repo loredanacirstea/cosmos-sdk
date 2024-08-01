@@ -949,15 +949,6 @@ loop:
 				return snapshottypes.SnapshotItem{}, errorsmod.Wrapf(types.ErrLogic, "cannot import into non-IAVL store %q", item.Store.Name)
 			}
 
-			if store.LastCommitID().Version == 1 {
-				rs.logger.Info("reverting store version to 0", "name", item.Store.Name)
-				err = store.LoadVersionForOverwriting(0)
-				store.Reset()
-				if err != nil {
-					return snapshottypes.SnapshotItem{}, errorsmod.Wrap(err, "rolling back version 1 failed")
-				}
-			}
-
 			importer, err = store.Import(int64(height))
 			if err != nil {
 				return snapshottypes.SnapshotItem{}, errorsmod.Wrap(err, "import failed")
@@ -1009,6 +1000,23 @@ loop:
 
 	rs.flushMetadata(rs.db, int64(height), rs.buildCommitInfo(int64(height)))
 	return snapshotItem, rs.LoadLatestVersion()
+}
+
+// reset all iavl stores; used before state sync
+func (rs *Store) ResetStores() error {
+	for name, key := range rs.keysByName {
+		store := rs.GetCommitKVStore(key)
+		iavlstore, ok := store.(*iavl.Store)
+		if ok && store.LastCommitID().Version == 1 {
+			rs.logger.Info("reverting store version to 0", "name", name, "from", store.LastCommitID().Version)
+			err := iavlstore.LoadVersionForOverwriting(0)
+			if err != nil {
+				return errorsmod.Wrap(err, "rolling back version 1 failed")
+			}
+			iavlstore.Reset()
+		}
+	}
+	return nil
 }
 
 func (rs *Store) loadCommitStoreFromParams(key types.StoreKey, id types.CommitID, params storeParams) (types.CommitKVStore, error) {
