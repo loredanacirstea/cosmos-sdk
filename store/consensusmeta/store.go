@@ -66,6 +66,25 @@ func (s *Store) Commit() (id types.CommitID) {
 	return
 }
 
+func (s Store) Reset() error {
+	var err error
+	batch := s.NewBatch()
+	defer func() {
+		_ = batch.Close()
+	}()
+
+	itr := s.Iterator(nil, nil)
+	defer itr.Close()
+	for ; itr.Valid(); itr.Next() {
+		batch.Delete(itr.Key())
+	}
+	err = batch.WriteSync()
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
 func (s *Store) SetPruning(pruning pruningtypes.PruningOptions) {}
 
 // GetPruning is a no-op as pruning options cannot be directly set on this store.

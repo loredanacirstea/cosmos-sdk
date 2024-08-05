@@ -90,6 +90,15 @@ func (tkv *Store) ReverseIterator(start, end []byte) types.Iterator {
 	return tkv.iterator(start, end, false)
 }
 
+func (s *Store) Reset() error {
+	itr := s.Iterator(nil, nil)
+	defer itr.Close()
+	for ; itr.Valid(); itr.Next() {
+		s.Delete(itr.Key())
+	}
+	return nil
+}
+
 // iterator facilitates iteration over a KVStore. It delegates the necessary
 // calls to it's parent KVStore.
 func (tkv *Store) iterator(start, end []byte, ascending bool) types.Iterator {

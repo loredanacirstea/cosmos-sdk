@@ -80,6 +80,15 @@ func (s Store) Delete(key []byte) {
 	s.parent.Delete(s.key(key))
 }
 
+func (s Store) Reset() error {
+	itr := s.Iterator(nil, nil)
+	defer itr.Close()
+	for ; itr.Valid(); itr.Next() {
+		s.Delete(itr.Key())
+	}
+	return nil
+}
+
 // Implements KVStore
 // Check https://github.com/cometbft/cometbft/blob/master/libs/db/prefix_db.go#L106
 func (s Store) Iterator(start, end []byte) types.Iterator {

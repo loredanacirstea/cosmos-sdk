@@ -86,5 +86,24 @@ func (dsa Store) CacheWrapWithTrace(w io.Writer, tc types.TraceContext) types.Ca
 	return cachekv.NewStore(tracekv.NewStore(dsa, w, tc))
 }
 
+func (s Store) Reset() error {
+	var err error
+	batch := s.NewBatch()
+	defer func() {
+		_ = batch.Close()
+	}()
+
+	itr := s.Iterator(nil, nil)
+	defer itr.Close()
+	for ; itr.Valid(); itr.Next() {
+		batch.Delete(itr.Key())
+	}
+	err = batch.WriteSync()
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
 // dbm.DB implements KVStore so we can CacheKVStore it.
 var _ types.KVStore = Store{}

@@ -171,6 +171,15 @@ func (store *Store) CacheWrapWithTrace(w io.Writer, tc types.TraceContext) types
 	return NewStore(tracekv.NewStore(store, w, tc))
 }
 
+func (s *Store) Reset() error {
+	itr := s.Iterator(nil, nil)
+	defer itr.Close()
+	for ; itr.Valid(); itr.Next() {
+		s.Delete(itr.Key())
+	}
+	return nil
+}
+
 //----------------------------------------
 // Iteration
 

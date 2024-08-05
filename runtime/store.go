@@ -142,6 +142,15 @@ func (s kvStoreAdapter) Set(key, value []byte) {
 	}
 }
 
+func (s kvStoreAdapter) Reset() error {
+	itr := s.Iterator(nil, nil)
+	defer itr.Close()
+	for ; itr.Valid(); itr.Next() {
+		s.Delete(itr.Key())
+	}
+	return nil
+}
+
 func (s kvStoreAdapter) Iterator(start, end []byte) dbm.Iterator {
 	it, err := s.store.Iterator(start, end)
 	if err != nil {

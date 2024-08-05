@@ -235,8 +235,8 @@ func (st *Store) LoadVersionForOverwriting(targetVersion int64) error {
 	return st.tree.LoadVersionForOverwriting(targetVersion)
 }
 
-func (st *Store) Reset() {
-	st.tree.Reset()
+func (st *Store) Reset() error {
+	return st.tree.Reset()
 }
 
 // Implements types.KVStore.

@@ -18,6 +18,10 @@ type multiStore struct {
 	kv map[storetypes.StoreKey]kvStore
 }
 
+func (s multiStore) Reset() error {
+	panic("not implemented")
+}
+
 func (ms multiStore) CacheMultiStore() storetypes.CacheMultiStore {
 	panic("not implemented")
 }
@@ -172,6 +176,10 @@ var _ storetypes.KVStore = kvStore{}
 
 type kvStore struct {
 	store map[string][]byte
+}
+
+func (s kvStore) Reset() error {
+	panic("not implemented")
 }
 
 func (kv kvStore) CacheWrap() storetypes.CacheWrap {

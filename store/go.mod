@@ -79,5 +79,5 @@ require (
 
 replace github.com/cosmos/gogoproto => github.com/ark-us/gogoproto v0.0.0-20240517150314-413ed4a81b9d
 
-// github.com/loredanacirstea/cosmos-iavl@822fc0b7551e0309633bd5e7925cc7847aa61ec5
-replace github.com/cosmos/iavl => github.com/loredanacirstea/cosmos-iavl v1.1.3-0.20240729214938-822fc0b7551e
+// github.com/loredanacirstea/cosmos-iavl@c3d360cff250eca096ec44326ab8d56f809dca7b
+replace github.com/cosmos/iavl => github.com/loredanacirstea/cosmos-iavl v1.0.0-rc.1.0.20240805221208-c3d360cff250

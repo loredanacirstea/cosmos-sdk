@@ -35,7 +35,7 @@ type (
 		AvailableVersions() []int
 		LoadVersionForOverwriting(targetVersion int64) error
 		TraverseStateChanges(startVersion, endVersion int64, fn func(version int64, changeSet *iavl.ChangeSet) error) error
-		Reset()
+		Reset() error
 	}
 
 	// immutableTree is a simple wrapper around a reference to an iavl.ImmutableTree
@@ -98,6 +98,6 @@ func (it *immutableTree) WorkingHash() []byte {
 	panic("cannot call 'WorkingHash' on an immutable IAVL tree")
 }
 
-func (it *immutableTree) Reset() {
+func (it *immutableTree) Reset() error {
 	panic("cannot call 'Reset' on an immutable IAVL tree")
 }

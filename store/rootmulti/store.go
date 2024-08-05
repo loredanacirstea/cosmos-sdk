@@ -1003,17 +1003,16 @@ loop:
 }
 
 // reset all iavl stores; used before state sync
-func (rs *Store) ResetStores() error {
+func (rs *Store) Reset() error {
 	for name, key := range rs.keysByName {
 		store := rs.GetCommitKVStore(key)
-		iavlstore, ok := store.(*iavl.Store)
-		if ok && store.LastCommitID().Version == 1 {
-			rs.logger.Info("reverting store version to 0", "name", name, "from", store.LastCommitID().Version)
-			err := iavlstore.LoadVersionForOverwriting(0)
-			if err != nil {
-				return errorsmod.Wrap(err, "rolling back version 1 failed")
-			}
-			iavlstore.Reset()
+		if store.LastCommitID().Version == 0 {
+			continue
+		}
+		rs.logger.Info("reverting store version to 0", "name", name, "from", store.LastCommitID().Version)
+		err := store.Reset()
+		if err != nil {
+			return errorsmod.Wrap(err, "rolling back version 1 failed")
 		}
 	}
 	return nil

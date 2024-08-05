@@ -92,6 +92,15 @@ func (gs *Store) CacheWrapWithTrace(_ io.Writer, _ types.TraceContext) types.Cac
 	panic("cannot CacheWrapWithTrace a GasKVStore")
 }
 
+func (s *Store) Reset() error {
+	itr := s.Iterator(nil, nil)
+	defer itr.Close()
+	for ; itr.Valid(); itr.Next() {
+		s.Delete(itr.Key())
+	}
+	return nil
+}
+
 func (gs *Store) iterator(start, end []byte, ascending bool) types.Iterator {
 	var parent types.Iterator
 	if ascending {
