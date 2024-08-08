@@ -2,6 +2,7 @@ package rootmulti
 
 import (
 	"crypto/sha256"
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"io"
@@ -36,7 +37,7 @@ import (
 
 const (
 	latestVersionKey = "s/latest"
-	commitInfoKeyFmt = "s/%d" // s/<version>
+	commitInfoKeyFmt = "s/%s/%d" // s/chain_id/<version>
 )
 
 const iavlDisablefastNodeDefault = false
@@ -1166,7 +1167,7 @@ func (rs *Store) SetCommitHeader(h cmtproto.Header) {
 // will return an error if no CommitInfo exists, we fail to unmarshal the record
 // or if we cannot retrieve the object from the DB.
 func (rs *Store) GetCommitInfo(ver int64) (*types.CommitInfo, error) {
-	cInfoKey := fmt.Sprintf(commitInfoKeyFmt, ver)
+	cInfoKey := fmt.Sprintf(commitInfoKeyFmt, rs.commitHeader.ChainID, ver)
 
 	bz, err := rs.db.Get([]byte(cInfoKey))
 	if err != nil {
@@ -1191,7 +1192,7 @@ func (rs *Store) flushMetadata(db dbm.DB, version int64, cInfo *types.CommitInfo
 	}()
 
 	if cInfo != nil {
-		flushCommitInfo(batch, version, cInfo)
+		flushCommitInfo(batch, rs.commitHeader.ChainID, version, cInfo)
 	} else {
 		rs.logger.Debug("commitInfo is nil, not flushed", "height", version)
 	}
@@ -1280,13 +1281,13 @@ func commitStores(version int64, storeMap map[types.StoreKey]types.CommitKVStore
 	}
 }
 
-func flushCommitInfo(batch dbm.Batch, version int64, cInfo *types.CommitInfo) {
+func flushCommitInfo(batch dbm.Batch, chainId string, version int64, cInfo *types.CommitInfo) {
 	bz, err := cInfo.Marshal()
 	if err != nil {
 		panic(err)
 	}
 
-	cInfoKey := fmt.Sprintf(commitInfoKeyFmt, version)
+	cInfoKey := fmt.Sprintf(commitInfoKeyFmt, chainId, version)
 	err = batch.Set([]byte(cInfoKey), bz)
 	if err != nil {
 		panic(err)
