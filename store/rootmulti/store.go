@@ -1006,9 +1006,9 @@ loop:
 func (rs *Store) Reset() error {
 	for name, key := range rs.keysByName {
 		store := rs.GetCommitKVStore(key)
-		if store.LastCommitID().Version == 0 {
-			continue
-		}
+		lastcommit := store.LastCommitID()
+		rs.logger.Info("last commitID", "key", key, "ver", lastcommit.Version, "hash", fmt.Sprintf("%x", lastcommit.Hash))
+
 		rs.logger.Info("reverting store version to 0", "name", name, "from", store.LastCommitID().Version)
 		err := store.Reset()
 		if err != nil {
@@ -1016,6 +1016,15 @@ func (rs *Store) Reset() error {
 		}
 	}
 	return nil
+}
+
+// print stores last commit ID
+func (rs *Store) PrintStoresLastCommitID() {
+	for _, key := range rs.keysByName {
+		store := rs.GetCommitKVStore(key)
+		commitID := store.LastCommitID()
+		rs.logger.Info("show store commitID", "key", key, "ver", commitID.Version, "hash", fmt.Sprintf("%x", commitID.Hash))
+	}
 }
 
 func (rs *Store) loadCommitStoreFromParams(key types.StoreKey, id types.CommitID, params storeParams) (types.CommitKVStore, error) {

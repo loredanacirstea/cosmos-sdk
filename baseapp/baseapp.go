@@ -21,6 +21,7 @@ import (
 	"cosmossdk.io/log"
 	"cosmossdk.io/store"
 	storemetrics "cosmossdk.io/store/metrics"
+	"cosmossdk.io/store/rootmulti"
 	"cosmossdk.io/store/snapshots"
 	storetypes "cosmossdk.io/store/types"
 
@@ -1235,4 +1236,12 @@ func (app *BaseApp) GetOptimisticExecution() *oe.OptimisticExecution {
 // SetChainID sets the chain ID in BaseApp.
 func (app *BaseApp) ResetStores() error {
 	return app.cms.Reset()
+}
+
+// SetChainID sets the chain ID in BaseApp.
+func (app *BaseApp) PrintStoresLastCommitID() {
+	rms, ok := app.cms.(*rootmulti.Store)
+	if ok {
+		rms.PrintStoresLastCommitID()
+	}
 }
