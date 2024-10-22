@@ -1331,7 +1331,8 @@ func (app *BaseApp) CreateQueryContext(height int64, prove bool) (sdk.Context, e
 		WithBlockHeight(height).
 		WithGasMeter(storetypes.NewGasMeter(app.queryGasLimit)).WithBlockHeader(header)
 
-	if height != lastBlockHeight {
+	var emptyTime time.Time
+	if height != lastBlockHeight || header.Time == emptyTime {
 		rms, ok := app.cms.(*rootmulti.Store)
 		if ok {
 			cInfo, err := rms.GetCommitInfo(height)

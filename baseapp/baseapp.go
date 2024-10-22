@@ -1245,3 +1245,11 @@ func (app *BaseApp) PrintStoresLastCommitID() {
 		rms.PrintStoresLastCommitID()
 	}
 }
+
+func (app *BaseApp) SetCheckStateHeader(h cmtproto.Header) {
+	app.setState(execModeCheck, h)
+}
+
+func (app *BaseApp) GetCheckStateContext() sdk.Context {
+	return app.checkState.Context()
+}
