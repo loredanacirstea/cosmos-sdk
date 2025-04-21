@@ -204,6 +204,22 @@ func (app *BaseApp) SetEndBlocker(endBlocker sdk.EndBlocker) {
 	app.endBlocker = endBlocker
 }
 
+func (app *BaseApp) SetBeginTransaction(v sdk.BeginTransaction) {
+	if app.sealed {
+		panic("SetBeginTransaction() on sealed BaseApp")
+	}
+
+	app.BeginTransaction = v
+}
+
+func (app *BaseApp) SetEndTransaction(v sdk.EndTransaction) {
+	if app.sealed {
+		panic("SetEndTransaction() on sealed BaseApp")
+	}
+
+	app.EndTransaction = v
+}
+
 func (app *BaseApp) SetPrepareCheckStater(prepareCheckStater sdk.PrepareCheckStater) {
 	if app.sealed {
 		panic("SetPrepareCheckStater() on sealed BaseApp")

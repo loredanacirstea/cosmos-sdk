@@ -199,6 +199,9 @@ type BaseApp struct {
 	// caching for FinalizeBlock
 	responseFinalizeBlock  *abci.ResponseFinalizeBlock
 	parentCtxFinalizeBlock context.Context
+
+	BeginTransaction sdk.BeginTransaction
+	EndTransaction   sdk.EndTransaction
 }
 
 // NewBaseApp returns a reference to an initialized BaseApp. It accepts a
@@ -876,6 +879,22 @@ func (app *BaseApp) runTx(mode execMode, txBytes []byte) (gInfo sdk.GasInfo, res
 	ctx := app.getContextForTx(mode, txBytes)
 	ms := ctx.MultiStore()
 
+	if app.BeginTransaction != nil {
+		err := app.BeginTransaction(ctx, sdk.ExecMode(mode), txBytes)
+		if err != nil {
+			ctx.Logger().Error("BeginTransaction", "err", err)
+		}
+	}
+
+	defer func() {
+		if app.EndTransaction != nil {
+			err := app.EndTransaction(ctx, sdk.ExecMode(mode), gInfo, result, anteEvents, err)
+			if err != nil {
+				ctx.Logger().Error("EndTransaction", "err", err)
+			}
+		}
+	}()
+
 	// only run the tx if there is block gas remaining
 	if mode == execModeFinalize && ctx.BlockGasMeter().IsOutOfGas() {
 		return gInfo, nil, nil, errorsmod.Wrap(sdkerrors.ErrOutOfGas, "no block gas left to run tx")
@@ -1032,7 +1051,6 @@ func (app *BaseApp) runTx(mode execMode, txBytes []byte) (gInfo sdk.GasInfo, res
 			result.Events = append(anteEvents, result.Events...)
 		}
 	}
-
 	return gInfo, result, anteEvents, err
 }
 

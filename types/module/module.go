@@ -279,6 +279,8 @@ type Manager struct {
 	OrderPreBlockers         []string
 	OrderBeginBlockers       []string
 	OrderEndBlockers         []string
+	OrderBeginTransaction    []string
+	OrderEndTransaction      []string
 	OrderPrepareCheckStaters []string
 	OrderPrecommiters        []string
 	OrderMigrations          []string
@@ -413,6 +415,36 @@ func (m *Manager) SetOrderEndBlockers(moduleNames ...string) {
 			return !hasABCIEndBlock
 		})
 	m.OrderEndBlockers = moduleNames
+}
+
+type HasBeginTransaction interface {
+	AppModule
+	BeginTransaction(ctx context.Context, txmode sdk.ExecMode, txBytes []byte) error
+}
+
+type HasEndTransaction interface {
+	AppModule
+	EndTransaction(ctx context.Context, txmode sdk.ExecMode, gInfo sdk.GasInfo, result *sdk.Result, anteEvents []abci.Event, err error) error
+}
+
+func (m *Manager) SetOrderBeginTransaction(moduleNames ...string) {
+	m.assertNoForgottenModules("SetOrderBeginTransaction", moduleNames,
+		func(moduleName string) bool {
+			module := m.Modules[moduleName]
+			_, hasBeginBlock := module.(HasBeginTransaction)
+			return !hasBeginBlock
+		})
+	m.OrderBeginTransaction = moduleNames
+}
+
+func (m *Manager) SetOrderEndTransaction(moduleNames ...string) {
+	m.assertNoForgottenModules("SetOrderEndTransaction", moduleNames,
+		func(moduleName string) bool {
+			module := m.Modules[moduleName]
+			_, hasBeginBlock := module.(HasEndTransaction)
+			return !hasBeginBlock
+		})
+	m.OrderEndTransaction = moduleNames
 }
 
 // SetOrderPrepareCheckStaters sets the order of set prepare-check-stater calls
@@ -825,6 +857,30 @@ func (m *Manager) EndBlock(ctx sdk.Context) (sdk.EndBlock, error) {
 		ValidatorUpdates: validatorUpdates,
 		Events:           ctx.EventManager().ABCIEvents(),
 	}, nil
+}
+
+func (m *Manager) BeginTransaction(ctx context.Context, txmode sdk.ExecMode, txBytes []byte) error {
+	for _, moduleName := range m.OrderBeginTransaction {
+		if module, ok := m.Modules[moduleName].(HasBeginTransaction); ok {
+			err := module.BeginTransaction(ctx, txmode, txBytes)
+			if err != nil {
+				return err
+			}
+		}
+	}
+	return nil
+}
+
+func (m *Manager) EndTransaction(ctx context.Context, txmode sdk.ExecMode, gInfo sdk.GasInfo, result *sdk.Result, anteEvents []abci.Event, err error) error {
+	for _, moduleName := range m.OrderEndTransaction {
+		if module, ok := m.Modules[moduleName].(HasEndTransaction); ok {
+			err := module.EndTransaction(ctx, txmode, gInfo, result, anteEvents, err)
+			if err != nil {
+				return err
+			}
+		}
+	}
+	return nil
 }
 
 // Precommit performs precommit functionality for all modules.

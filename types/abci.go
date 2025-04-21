@@ -1,6 +1,8 @@
 package types
 
 import (
+	"context"
+
 	abci "github.com/cometbft/cometbft/abci/types"
 )
 
@@ -55,6 +57,9 @@ type BeginBlocker func(Context, *abci.RequestFinalizeBlock) (BeginBlock, error)
 // compatibility with applications that still use the EndBlock ABCI method
 // and allows for existing EndBlock functionality within applications.
 type EndBlocker func(Context, []byte) (EndBlock, error)
+
+type BeginTransaction func(ctx context.Context, mode ExecMode, txBytes []byte) error
+type EndTransaction func(ctx context.Context, mode ExecMode, gInfo GasInfo, result *Result, anteEvents []abci.Event, err error) error
 
 // EndBlock defines a type which contains endblock events and validator set updates
 type EndBlock struct {
