@@ -1234,6 +1234,22 @@ func (app *BaseApp) handleQueryGRPC(handler GRPCQueryHandler, req *abci.RequestQ
 	}
 	ctx = ctx.WithExecMode(sdk.ExecModeQuery)
 
+	if app.BeginTransaction != nil {
+		err := app.BeginTransaction(ctx, sdk.ExecModeQuery, req.Data)
+		if err != nil {
+			ctx.Logger().Error("BeginTransaction", "err", err)
+		}
+	}
+
+	defer func() {
+		if app.EndTransaction != nil {
+			err := app.EndTransaction(ctx, sdk.ExecModeQuery, sdk.GasInfo{}, nil, nil, err)
+			if err != nil {
+				ctx.Logger().Error("EndTransaction", "err", err)
+			}
+		}
+	}()
+
 	resp, err := handler(ctx, req)
 	if err != nil {
 		resp = sdkerrors.QueryResult(gRPCErrorToSDKError(err), app.trace)
