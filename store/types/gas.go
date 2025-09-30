@@ -105,7 +105,7 @@ func addUint64Overflow(a, b uint64) (uint64, bool) {
 
 // ConsumeGas adds the given amount of gas to the gas consumed and panics if it overflows the limit or out of gas.
 func (g *basicGasMeter) ConsumeGas(amount Gas, descriptor string) {
-	fmt.Println("**basicGasMeter.ConsumeGas--", descriptor, amount)
+	// fmt.Println("**basicGasMeter.ConsumeGas--", descriptor, amount)
 	var overflow bool
 	g.consumed, overflow = addUint64Overflow(g.consumed, amount)
 	if overflow {
@@ -181,7 +181,7 @@ func (g *infiniteGasMeter) Limit() Gas {
 
 // ConsumeGas adds the given amount of gas to the gas consumed and panics if it overflows the limit.
 func (g *infiniteGasMeter) ConsumeGas(amount Gas, descriptor string) {
-	fmt.Println("**infiniteGasMeter.ConsumeGas--", descriptor, amount)
+	// fmt.Println("**infiniteGasMeter.ConsumeGas--", descriptor, amount)
 	var overflow bool
 	// TODO: Should we set the consumed field after overflow checking?
 	g.consumed, overflow = addUint64Overflow(g.consumed, amount)
