@@ -1,6 +1,7 @@
 package iavl
 
 import (
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"io"
@@ -187,6 +188,7 @@ func (st *Store) CacheWrapWithTrace(w io.Writer, tc types.TraceContext) types.Ca
 func (st *Store) Set(key, value []byte) {
 	types.AssertValidKey(key)
 	types.AssertValidValue(value)
+	fmt.Println("*iavl.set--", hex.EncodeToString(key), string(key), hex.EncodeToString(value), string(value))
 	_, err := st.tree.Set(key, value)
 	if err != nil && st.logger != nil {
 		st.logger.Error("iavl set error", "error", err.Error())
@@ -196,6 +198,7 @@ func (st *Store) Set(key, value []byte) {
 // Implements types.KVStore.
 func (st *Store) Get(key []byte) []byte {
 	defer st.metrics.MeasureSince("store", "iavl", "get")
+	fmt.Println("*iavl.get--", hex.EncodeToString(key), string(key))
 	value, err := st.tree.Get(key)
 	if err != nil {
 		panic(err)
@@ -206,6 +209,7 @@ func (st *Store) Get(key []byte) []byte {
 // Implements types.KVStore.
 func (st *Store) Has(key []byte) (exists bool) {
 	defer st.metrics.MeasureSince("store", "iavl", "has")
+	fmt.Println("*iavl.has--", hex.EncodeToString(key), string(key))
 	has, err := st.tree.Has(key)
 	if err != nil {
 		panic(err)
@@ -216,6 +220,7 @@ func (st *Store) Has(key []byte) (exists bool) {
 // Implements types.KVStore.
 func (st *Store) Delete(key []byte) {
 	defer st.metrics.MeasureSince("store", "iavl", "delete")
+	fmt.Println("*iavl.delete--", hex.EncodeToString(key), string(key))
 	_, _, err := st.tree.Remove(key)
 	if err != nil {
 		panic(err)
