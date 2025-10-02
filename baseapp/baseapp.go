@@ -967,7 +967,7 @@ func (app *BaseApp) runTx(mode execMode, txBytes []byte) (gInfo sdk.GasInfo, res
 		anteCtx, msCache = app.cacheTxContext(ctx, txBytes)
 		anteCtx = anteCtx.WithEventManager(sdk.NewEventManager())
 		newCtx, err := app.anteHandler(anteCtx, tx, mode == execModeSimulate)
-
+		fmt.Println("--baseapp.anteHandler--", err, ctx.GasMeter().GasConsumed())
 		if !newCtx.IsZero() {
 			// At this point, newCtx.MultiStore() is a store branch, or something else
 			// replaced by the AnteHandler. We want the original multistore.
