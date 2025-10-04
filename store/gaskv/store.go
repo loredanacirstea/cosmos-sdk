@@ -41,7 +41,7 @@ func (gs *Store) Get(key []byte) (value []byte) {
 	// TODO overflow-safe math?
 	gs.gasMeter.ConsumeGas(gs.gasConfig.ReadCostPerByte*types.Gas(len(key)), types.GasReadPerByteDesc)
 	gs.gasMeter.ConsumeGas(gs.gasConfig.ReadCostPerByte*types.Gas(len(value)), types.GasReadPerByteDesc)
-	fmt.Println("*gaskv.get--", gs.parent.GetStoreType(), hex.EncodeToString(key), string(key))
+	fmt.Println("*gaskv.get--", gs.parent.GetStoreType(), hex.EncodeToString(key), string(key), gs.gasMeter.Limit(), gs.gasMeter.GasConsumed())
 
 	return value
 }
@@ -55,13 +55,13 @@ func (gs *Store) Set(key, value []byte) {
 	gs.gasMeter.ConsumeGas(gs.gasConfig.WriteCostPerByte*types.Gas(len(key)), types.GasWritePerByteDesc)
 	gs.gasMeter.ConsumeGas(gs.gasConfig.WriteCostPerByte*types.Gas(len(value)), types.GasWritePerByteDesc)
 	gs.parent.Set(key, value)
-	fmt.Println("*gaskv.set--", gs.parent.GetStoreType(), hex.EncodeToString(key), string(key), hex.EncodeToString(value), string(value))
+	fmt.Println("*gaskv.set--", gs.parent.GetStoreType(), hex.EncodeToString(key), string(key), hex.EncodeToString(value), string(value), gs.gasMeter.Limit(), gs.gasMeter.GasConsumed())
 }
 
 // Implements KVStore.
 func (gs *Store) Has(key []byte) bool {
 	gs.gasMeter.ConsumeGas(gs.gasConfig.HasCost, types.GasHasDesc)
-	fmt.Println("*gaskv.has--", gs.parent.GetStoreType(), hex.EncodeToString(key), string(key))
+	fmt.Println("*gaskv.has--", gs.parent.GetStoreType(), hex.EncodeToString(key), string(key), gs.gasMeter.Limit(), gs.gasMeter.GasConsumed())
 	return gs.parent.Has(key)
 }
 
@@ -70,7 +70,7 @@ func (gs *Store) Delete(key []byte) {
 	// charge gas to prevent certain attack vectors even though space is being freed
 	gs.gasMeter.ConsumeGas(gs.gasConfig.DeleteCost, types.GasDeleteDesc)
 	gs.parent.Delete(key)
-	fmt.Println("*gaskv.delete--", gs.parent.GetStoreType(), hex.EncodeToString(key), string(key))
+	fmt.Println("*gaskv.delete--", gs.parent.GetStoreType(), hex.EncodeToString(key), string(key), gs.gasMeter.Limit(), gs.gasMeter.GasConsumed())
 }
 
 // Iterator implements the KVStore interface. It returns an iterator which
@@ -117,7 +117,7 @@ func (gs *Store) iterator(start, end []byte, ascending bool) types.Iterator {
 
 	gi := newGasIterator(gs.gasMeter, gs.gasConfig, parent)
 	gi.(*gasIterator).consumeSeekGas()
-	fmt.Println("*gaskv.iterator--", hex.EncodeToString(start), string(start), "--", hex.EncodeToString(end), string(end))
+	fmt.Println("*gaskv.iterator--", hex.EncodeToString(start), string(start), "--", hex.EncodeToString(end), string(end), gs.gasMeter.Limit(), gs.gasMeter.GasConsumed())
 
 	return gi
 }

@@ -967,7 +967,7 @@ func (app *BaseApp) runTx(mode execMode, txBytes []byte) (gInfo sdk.GasInfo, res
 		anteCtx, msCache = app.cacheTxContext(ctx, txBytes)
 		anteCtx = anteCtx.WithEventManager(sdk.NewEventManager())
 		newCtx, err := app.anteHandler(anteCtx, tx, mode == execModeSimulate)
-		fmt.Println("--baseapp.anteHandler--", err, ctx.GasMeter().GasConsumed())
+		fmt.Println("--baseapp.anteHandler--", err, ctx.GasMeter().Limit(), ctx.GasMeter().GasConsumed())
 		if !newCtx.IsZero() {
 			// At this point, newCtx.MultiStore() is a store branch, or something else
 			// replaced by the AnteHandler. We want the original multistore.
@@ -1071,6 +1071,7 @@ func (app *BaseApp) runMsgs(ctx sdk.Context, msgs []sdk.Msg, msgsV2 []protov2.Me
 
 	// NOTE: GasWanted is determined by the AnteHandler and GasUsed by the GasMeter.
 	for i, msg := range msgs {
+		fmt.Println("--baseapp.runMsgs--", i, ctx.GasMeter().Limit(), ctx.GasMeter().GasConsumed())
 		if mode != execModeFinalize && mode != execModeSimulate {
 			break
 		}
@@ -1092,6 +1093,7 @@ func (app *BaseApp) runMsgs(ctx sdk.Context, msgs []sdk.Msg, msgsV2 []protov2.Me
 		if err != nil {
 			return nil, errorsmod.Wrapf(err, "failed to execute message; message index: %d", i)
 		}
+		fmt.Println("--baseapp.runMsgs.posthandler--", i, ctx.GasMeter().Limit(), ctx.GasMeter().GasConsumed())
 
 		// create message events
 		msgEvents, err := createEvents(app.cdc, msgResult.GetEvents(), msg, msgsV2[i])
